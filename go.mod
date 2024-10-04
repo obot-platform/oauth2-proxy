@@ -12,13 +12,14 @@ require (
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-jose/go-jose/v3 v3.0.4
+	github.com/go-jose/go-jose/v3 v3.0.5
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/jackc/pgx/v5 v5.9.1
 	github.com/justinas/alice v1.2.0
 	github.com/oauth2-proxy/mockoidc v0.0.0-20240214162133-caebfff84d25
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -38,6 +39,8 @@ require (
 	golang.org/x/sync v0.20.0
 	google.golang.org/api v0.272.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.31.1
 	k8s.io/apimachinery v0.35.3
 )
 
@@ -57,6 +60,11 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.19.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect

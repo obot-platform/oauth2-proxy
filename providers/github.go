@@ -32,7 +32,8 @@ var _ Provider = (*GitHubProvider)(nil)
 
 const (
 	githubProviderName = "GitHub"
-	githubDefaultScope = "user:email read:org"
+	githubDefaultScope = "user:email"
+	githubReadOrgScope = "read:org"
 	orgTeamSeparator   = ":"
 )
 
@@ -66,13 +67,18 @@ var (
 
 // NewGitHubProvider initiates a new GitHubProvider
 func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvider {
+	scope := githubDefaultScope
+	if opts.Team != "" || opts.Org != "" {
+		scope += " " + githubReadOrgScope
+	}
+
 	p.setProviderDefaults(providerDefaults{
 		name:        githubProviderName,
 		loginURL:    githubDefaultLoginURL,
 		redeemURL:   githubDefaultRedeemURL,
 		profileURL:  nil,
 		validateURL: githubDefaultValidateURL,
-		scope:       githubDefaultScope,
+		scope:       scope,
 	})
 
 	provider := &GitHubProvider{ProviderData: p}
@@ -132,8 +138,11 @@ func (p *GitHubProvider) setUsers(users []string) {
 // EnrichSession updates the User & Email after the initial Redeem
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Construct user info JSON from multiple GitHub API endpoints to have a more detailed session state
-	if err := p.getOrgAndTeam(ctx, s); err != nil {
-		return err
+
+	if p.Org != "" || p.Team != "" {
+		if err := p.getOrgAndTeam(ctx, s); err != nil {
+			return err
+		}
 	}
 
 	if err := p.checkRestrictions(ctx, s); err != nil {
@@ -150,6 +159,33 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 // ValidateSession validates the AccessToken
 func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
+}
+
+// RefreshSession refreshes the session by re-validating org/team membership.
+// This is critical for security: even if the GitHub access token is still valid,
+// the user's org/team membership may have changed. We must re-fetch and re-validate
+// to ensure users who are removed from required orgs/teams lose access.
+func (p *GitHubProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.AccessToken == "" {
+		return false, nil
+	}
+
+	// Re-fetch org and team membership if restrictions are configured.
+	// Clear existing groups first to ensure we have fresh data from GitHub.
+	if p.Org != "" || p.Team != "" {
+		s.Groups = nil
+		if err := p.getOrgAndTeam(ctx, s); err != nil {
+			return false, fmt.Errorf("failed to fetch org/team membership: %v", err)
+		}
+	}
+
+	// Re-validate all restrictions (org, team, repo, allowed users).
+	// If the user no longer meets the requirements, their session must be invalidated.
+	if err := p.checkRestrictions(ctx, s); err != nil {
+		return false, fmt.Errorf("user no longer meets access requirements: %v", err)
+	}
+
+	return true, nil
 }
 
 func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {

@@ -43,7 +43,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 	}
 
 	err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
-		return m.Store.Save(req.Context(), key, val, exp)
+		return m.Store.Save(req.Context(), key, val, exp, s.User, s.Email)
 	})
 	if err != nil {
 		return err

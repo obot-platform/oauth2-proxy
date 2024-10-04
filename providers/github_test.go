@@ -41,6 +41,7 @@ func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 		"/user/emails": {""},
 		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
+		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		// GitHub Enterprise Server API
 		"/api/v3":             {""},
 		"/api/v3/user/emails": {""},
@@ -619,4 +620,125 @@ func TestGitHubProvider_ValidateSessionWithUserEmails(t *testing.T) {
 
 	valid := p.ValidateSession(context.Background(), session)
 	assert.True(t, valid)
+}
+
+func TestGitHubProvider_RefreshSessionWithValidOrg(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/orgs": {
+			`[ {"login":"testorg"} ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{
+		Org: "testorg",
+	})
+
+	session := CreateAuthorizedSession()
+	session.Email = "test@example.com"
+	session.User = "testuser"
+	session.Groups = []string{"testorg"}
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.True(t, refreshed)
+	assert.Contains(t, session.Groups, "testorg")
+}
+
+func TestGitHubProvider_RefreshSessionWithRemovedOrg(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/orgs": {
+			`[ {"login":"otherorg"} ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{
+		Org: "testorg",
+	})
+
+	session := CreateAuthorizedSession()
+	session.Email = "test@example.com"
+	session.User = "testuser"
+	session.Groups = []string{"testorg"}
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.Error(t, err)
+	assert.False(t, refreshed)
+	assert.Contains(t, err.Error(), "no longer meets access requirements")
+}
+
+func TestGitHubProvider_RefreshSessionWithNilSession(t *testing.T) {
+	p := testGitHubProvider("", options.GitHubOptions{})
+
+	refreshed, err := p.RefreshSession(context.Background(), nil)
+	assert.NoError(t, err)
+	assert.False(t, refreshed)
+}
+
+func TestGitHubProvider_RefreshSessionWithEmptyAccessToken(t *testing.T) {
+	p := testGitHubProvider("", options.GitHubOptions{})
+
+	session := &sessions.SessionState{
+		AccessToken: "",
+		Email:       "test@example.com",
+	}
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.False(t, refreshed)
+}
+
+func TestGitHubProvider_RefreshSessionWithNoRestrictions(t *testing.T) {
+	p := testGitHubProvider("", options.GitHubOptions{})
+
+	session := CreateAuthorizedSession()
+	session.Email = "test@example.com"
+	session.User = "testuser"
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.True(t, refreshed)
+}
+
+func TestGitHubProvider_RefreshSessionWithAllowedUser(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user": {`{"login":"alice", "email":"alice@example.com"}`},
+		"/user/orgs": {
+			`[ {"login":"otherorg"} ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{
+		Org:   "testorg",
+		Users: []string{"alice", "bob"},
+	})
+
+	session := CreateAuthorizedSession()
+	session.Email = "alice@example.com"
+	session.User = "alice"
+	session.Groups = []string{}
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.True(t, refreshed)
 }
