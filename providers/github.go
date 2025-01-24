@@ -32,7 +32,8 @@ var _ Provider = (*GitHubProvider)(nil)
 
 const (
 	githubProviderName = "GitHub"
-	githubDefaultScope = "user:email read:org"
+	githubDefaultScope = "user:email"
+	githubReadOrgScope = "read:org"
 	orgTeamSeparator   = ":"
 )
 
@@ -66,13 +67,18 @@ var (
 
 // NewGitHubProvider initiates a new GitHubProvider
 func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvider {
+	scope := githubDefaultScope
+	if opts.Team != "" || opts.Org != "" {
+		scope += " " + githubReadOrgScope
+	}
+
 	p.setProviderDefaults(providerDefaults{
 		name:        githubProviderName,
 		loginURL:    githubDefaultLoginURL,
 		redeemURL:   githubDefaultRedeemURL,
 		profileURL:  nil,
 		validateURL: githubDefaultValidateURL,
-		scope:       githubDefaultScope,
+		scope:       scope,
 	})
 
 	provider := &GitHubProvider{ProviderData: p}
@@ -132,8 +138,11 @@ func (p *GitHubProvider) setUsers(users []string) {
 // EnrichSession updates the User & Email after the initial Redeem
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Construct user info JSON from multiple GitHub API endpoints to have a more detailed session state
-	if err := p.getOrgAndTeam(ctx, s); err != nil {
-		return err
+
+	if p.Org != "" || p.Team != "" {
+		if err := p.getOrgAndTeam(ctx, s); err != nil {
+			return err
+		}
 	}
 
 	if err := p.checkRestrictions(ctx, s); err != nil {
