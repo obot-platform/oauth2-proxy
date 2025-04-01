@@ -26,8 +26,8 @@ type Session struct {
 	Key       string `gorm:"primaryKey"`
 	Value     []byte `gorm:"type:bytea"`
 	ExpiresAt time.Time
-	User      string
-	Email     string
+	User      []byte `gorm:"type:bytea"`
+	Email     []byte `gorm:"type:bytea"`
 }
 
 // NewPostgresSessionStore initialises a new instance of the SessionStore and wraps
@@ -64,8 +64,8 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 		Key:       key,
 		Value:     value,
 		ExpiresAt: time.Now().Add(exp),
-		User:      fmt.Sprintf("%x", userHash),
-		Email:     fmt.Sprintf("%x", emailHash),
+		User:      userHash[:],
+		Email:     emailHash[:],
 	}
 
 	result := store.db.WithContext(ctx).Table(store.tableNamePrefix + "_sessions").Save(session)
