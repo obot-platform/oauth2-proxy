@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -55,13 +56,16 @@ func NewPostgresSessionStore(opts *options.SessionOptions, cookieOpts *options.C
 
 // Save takes a sessions.SessionState and stores the information from it
 // to PostgreSQL, and adds a new persistence cookie on the HTTP response writer
-func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration, user string, email string) error {
+func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration, user, email string) error {
+	userHash := sha256.Sum256([]byte(user))
+	emailHash := sha256.Sum256([]byte(email))
+
 	session := &Session{
 		Key:       key,
 		Value:     value,
 		ExpiresAt: time.Now().Add(exp),
-		User:      user,
-		Email:     email,
+		User:      fmt.Sprintf("%x", userHash),
+		Email:     fmt.Sprintf("%x", emailHash),
 	}
 
 	result := store.db.WithContext(ctx).Table(store.tableNamePrefix + "_sessions").Save(session)
