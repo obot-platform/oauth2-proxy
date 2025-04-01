@@ -25,6 +25,8 @@ type Session struct {
 	Key       string `gorm:"primaryKey"`
 	Value     []byte `gorm:"type:bytea"`
 	ExpiresAt time.Time
+	User      string
+	Email     string
 }
 
 // NewPostgresSessionStore initialises a new instance of the SessionStore and wraps
@@ -53,11 +55,13 @@ func NewPostgresSessionStore(opts *options.SessionOptions, cookieOpts *options.C
 
 // Save takes a sessions.SessionState and stores the information from it
 // to PostgreSQL, and adds a new persistence cookie on the HTTP response writer
-func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
+func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration, user string, email string) error {
 	session := &Session{
 		Key:       key,
 		Value:     value,
 		ExpiresAt: time.Now().Add(exp),
+		User:      user,
+		Email:     email,
 	}
 
 	result := store.db.WithContext(ctx).Table(store.tableNamePrefix + "_sessions").Save(session)
