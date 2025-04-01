@@ -92,6 +92,8 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 
 		BeforeEach(func() {
 			store = &SessionStore{db: db, tableNamePrefix: "oauth2_proxy_test"}
+			db.Table("oauth2_proxy_test_sessions").AutoMigrate(&Session{})
+			db.Table("oauth2_proxy_test_session_locks").AutoMigrate(&SessionLock{})
 		})
 
 		It("obtains and releases locks", func() {

@@ -18,14 +18,6 @@ type SessionLock struct {
 	UpdatedAt time.Time
 }
 
-// Lock implements the sessions.Lock interface using a custom table.
-// This implementation uses a dedicated table to track locks with expiration times.
-//
-// Important notes about this implementation:
-// 1. Locks have built-in expiration functionality
-// 2. Locks are automatically cleaned up when they expire
-// 3. The lock key is stored directly in the table
-// 4. If the database connection is lost, the lock will be automatically released
 type Lock struct {
 	db              *gorm.DB
 	key             string

@@ -160,6 +160,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("postgres-max-idle-conns", 10, "Maximum number of idle connections to postgres")
 	flagSet.Int("postgres-max-open-conns", 100, "Maximum number of open connections to postgres")
 	flagSet.Int("postgres-conn-max-lifetime", 3600, "Maximum lifetime of a connection to postgres in seconds")
+	flagSet.String("postgres-table-name-prefix", "", "Prefix for postgres table names")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
