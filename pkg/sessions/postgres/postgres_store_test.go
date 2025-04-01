@@ -71,7 +71,7 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 			}
 			opts.Type = options.PostgresSessionStoreType
 			opts.Postgres.ConnectionURL = dsn
-			opts.Postgres.TableNamePrefix = "oauth2_proxy_test"
+			opts.Postgres.TableNamePrefix = "oauth2_proxy_test_"
 
 			// Create new session store
 			var err error
@@ -91,7 +91,7 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 		var store *SessionStore
 
 		BeforeEach(func() {
-			store = &SessionStore{db: db, tableNamePrefix: "oauth2_proxy_test"}
+			store = &SessionStore{db: db, tableNamePrefix: "oauth2_proxy_test_"}
 			db.Table("oauth2_proxy_test_sessions").AutoMigrate(&Session{})
 			db.Table("oauth2_proxy_test_session_locks").AutoMigrate(&SessionLock{})
 		})

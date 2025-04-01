@@ -39,10 +39,10 @@ func NewPostgresSessionStore(opts *options.SessionOptions, cookieOpts *options.C
 	}
 
 	// Auto-migrate the session and lock tables
-	if err := db.Table(opts.Postgres.TableNamePrefix + "_sessions").AutoMigrate(&Session{}); err != nil {
+	if err := db.Table(opts.Postgres.TableNamePrefix + "sessions").AutoMigrate(&Session{}); err != nil {
 		return nil, fmt.Errorf("error migrating postgres schema: %v", err)
 	}
-	if err := db.Table(opts.Postgres.TableNamePrefix + "_session_locks").AutoMigrate(&SessionLock{}); err != nil {
+	if err := db.Table(opts.Postgres.TableNamePrefix + "session_locks").AutoMigrate(&SessionLock{}); err != nil {
 		return nil, fmt.Errorf("error migrating postgres schema: %v", err)
 	}
 
@@ -68,7 +68,7 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 		Email:     emailHash[:],
 	}
 
-	result := store.db.WithContext(ctx).Table(store.tableNamePrefix + "_sessions").Save(session)
+	result := store.db.WithContext(ctx).Table(store.tableNamePrefix + "sessions").Save(session)
 	if result.Error != nil {
 		return fmt.Errorf("error saving postgres session: %v", result.Error)
 	}
@@ -79,7 +79,7 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 // cookie within the HTTP request object
 func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
 	var session Session
-	result := store.db.WithContext(ctx).Table(store.tableNamePrefix+"_sessions").Where("key = ? AND expires_at > ?", key, time.Now()).First(&session)
+	result := store.db.WithContext(ctx).Table(store.tableNamePrefix+"sessions").Where("key = ? AND expires_at > ?", key, time.Now()).First(&session)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error loading postgres session: %v", result.Error)
 	}
@@ -89,7 +89,7 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 // Clear clears any saved session information for a given persistence cookie
 // from PostgreSQL, and then clears the session
 func (store *SessionStore) Clear(ctx context.Context, key string) error {
-	result := store.db.WithContext(ctx).Table(store.tableNamePrefix+"_sessions").Where("key = ?", key).Delete(&Session{})
+	result := store.db.WithContext(ctx).Table(store.tableNamePrefix+"sessions").Where("key = ?", key).Delete(&Session{})
 	if result.Error != nil {
 		return fmt.Errorf("error clearing the session from postgres: %v", result.Error)
 	}

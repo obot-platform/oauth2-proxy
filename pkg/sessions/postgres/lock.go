@@ -53,14 +53,14 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 	}()
 
 	// Clean up expired locks
-	if err := tx.Table(l.tableNamePrefix+"_session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
+	if err := tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("error cleaning up expired locks: %w", err)
 	}
 
 	// Check if lock exists and is valid
 	var existingLock SessionLock
-	err := tx.Table(l.tableNamePrefix+"_session_locks").Where("key = ?", l.key).First(&existingLock).Error
+	err := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).First(&existingLock).Error
 	if err == nil {
 		// Lock exists and hasn't expired
 		tx.Rollback()
@@ -76,7 +76,7 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 		Key:       l.key,
 		ExpiresAt: time.Now().Add(expiration),
 	}
-	if err := tx.Table(l.tableNamePrefix + "_session_locks").Create(lock).Error; err != nil {
+	if err := tx.Table(l.tableNamePrefix + "session_locks").Create(lock).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("error creating lock: %w", err)
 	}
@@ -92,13 +92,13 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 	}
 
 	// Clean up expired locks
-	if err := l.db.WithContext(ctx).Table(l.tableNamePrefix+"_session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
+	if err := l.db.WithContext(ctx).Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		return false, fmt.Errorf("error cleaning up expired locks: %w", err)
 	}
 
 	// Check if lock exists and is valid
 	var lock SessionLock
-	err := l.db.WithContext(ctx).Table(l.tableNamePrefix+"_session_locks").Where("key = ?", l.key).First(&lock).Error
+	err := l.db.WithContext(ctx).Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).First(&lock).Error
 	if err == nil {
 		return true, nil
 	}
@@ -128,7 +128,7 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 
 	// First verify we hold the lock
 	var existingLock SessionLock
-	err := tx.Table(l.tableNamePrefix+"_session_locks").Where("key = ? AND expires_at > ?", l.key, time.Now()).First(&existingLock).Error
+	err := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ? AND expires_at > ?", l.key, time.Now()).First(&existingLock).Error
 	if err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -138,7 +138,7 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 	}
 
 	// Update lock expiration
-	result := tx.Table(l.tableNamePrefix+"_session_locks").Model(&SessionLock{}).
+	result := tx.Table(l.tableNamePrefix+"session_locks").Model(&SessionLock{}).
 		Where("key = ?", l.key).
 		Update("expires_at", time.Now().Add(expiration))
 	if result.Error != nil {
@@ -172,13 +172,13 @@ func (l *Lock) Release(ctx context.Context) error {
 	}()
 
 	// Clean up expired locks
-	if err := tx.Table(l.tableNamePrefix+"_session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
+	if err := tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("error cleaning up expired locks: %w", err)
 	}
 
 	// Delete the lock
-	result := tx.Table(l.tableNamePrefix+"_session_locks").Where("key = ?", l.key).Delete(&SessionLock{})
+	result := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).Delete(&SessionLock{})
 	if result.Error != nil {
 		tx.Rollback()
 		return fmt.Errorf("error releasing lock: %w", result.Error)
