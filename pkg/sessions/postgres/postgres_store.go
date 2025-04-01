@@ -121,7 +121,7 @@ func NewPostgresClient(opts options.PostgresStoreOptions) (*gorm.DB, error) {
 	config := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	}
-	db, err := gorm.Open(postgres.Open(opts.ConnectionURL), config)
+	db, err := gorm.Open(postgres.Open(opts.ConnectionDSN), config)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to postgres: %v", err)
 	}

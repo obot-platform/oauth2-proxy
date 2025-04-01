@@ -30,7 +30,7 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 		// Create test database connection
 		var err error
 		db, err = NewPostgresClient(options.PostgresStoreOptions{
-			ConnectionURL: dsn,
+			ConnectionDSN: dsn,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -70,7 +70,7 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 				dsn = "postgres://postgres:postgres@localhost:5432/oauth2_proxy_test?sslmode=disable"
 			}
 			opts.Type = options.PostgresSessionStoreType
-			opts.Postgres.ConnectionURL = dsn
+			opts.Postgres.ConnectionDSN = dsn
 			opts.Postgres.TableNamePrefix = "oauth2_proxy_test_"
 
 			// Create new session store

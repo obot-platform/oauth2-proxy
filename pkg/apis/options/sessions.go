@@ -43,7 +43,7 @@ type RedisStoreOptions struct {
 
 // PostgresStoreOptions contains configuration options for the PostgresSessionStore.
 type PostgresStoreOptions struct {
-	ConnectionURL   string `flag:"postgres-connection-url" cfg:"postgres_connection_url"`
+	ConnectionDSN   string `flag:"postgres-connection-dsn" cfg:"postgres_connection_dsn"`
 	MaxIdleConns    int    `flag:"postgres-max-idle-conns" cfg:"postgres_max_idle_conns"`
 	MaxOpenConns    int    `flag:"postgres-max-open-conns" cfg:"postgres_max_open_conns"`
 	ConnMaxLifetime int    `flag:"postgres-conn-max-lifetime" cfg:"postgres_conn_max_lifetime"`
