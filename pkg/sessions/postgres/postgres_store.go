@@ -57,6 +57,8 @@ func NewPostgresSessionStore(opts *options.SessionOptions, cookieOpts *options.C
 // Save takes a sessions.SessionState and stores the information from it
 // to PostgreSQL, and adds a new persistence cookie on the HTTP response writer
 func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration, user, email string) error {
+	// We store the username and email as hashes so that we can associate sessions with particular users.
+	// This will allow us, in the future, to delete all sessions for a particular user.
 	userHash := sha256.Sum256([]byte(user))
 	emailHash := sha256.Sum256([]byte(email))
 
