@@ -35,39 +35,37 @@ func NewLock(db *gorm.DB, key string, tableNamePrefix string) sessions.Lock {
 
 // Obtain obtains a lock by inserting a record into the session_lock table.
 // If a lock already exists and hasn't expired, it will return ErrLockNotObtained.
-func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
-	// Verify database connection is healthy
-	if err := l.verifyConnection(ctx); err != nil {
-		return fmt.Errorf("database connection error: %w", err)
-	}
-
-	// Start a transaction to ensure atomicity
+func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error) {
 	tx := l.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("error starting transaction: %w", tx.Error)
-	}
+
 	defer func() {
-		if r := recover(); r != nil {
+		if err != nil {
 			tx.Rollback()
 		}
 	}()
 
+	if tx.Error != nil {
+		return fmt.Errorf("error starting transaction: %w", tx.Error)
+	}
+
+	// Verify database connection is healthy
+	if err = l.verifyConnection(ctx); err != nil {
+		return
+	}
+
 	// Clean up expired locks
-	if err := tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
-		tx.Rollback()
+	if err = tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		return fmt.Errorf("error cleaning up expired locks: %w", err)
 	}
 
 	// Check if lock exists and is valid
 	var existingLock SessionLock
-	err := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).First(&existingLock).Error
+	err = tx.Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).First(&existingLock).Error
 	if err == nil {
 		// Lock exists and hasn't expired
-		tx.Rollback()
 		return sessions.ErrLockNotObtained
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		tx.Rollback()
 		return fmt.Errorf("error checking existing lock: %w", err)
 	}
 
@@ -76,8 +74,7 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 		Key:       l.key,
 		ExpiresAt: time.Now().Add(expiration),
 	}
-	if err := tx.Table(l.tableNamePrefix + "session_locks").Create(lock).Error; err != nil {
-		tx.Rollback()
+	if err = tx.Table(l.tableNamePrefix + "session_locks").Create(lock).Error; err != nil {
 		return fmt.Errorf("error creating lock: %w", err)
 	}
 
@@ -109,7 +106,7 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 }
 
 // Refresh refreshes the lock by updating its expiration time
-func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
+func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) (err error) {
 	// Verify database connection is healthy
 	if err := l.verifyConnection(ctx); err != nil {
 		return fmt.Errorf("database connection error: %w", err)
@@ -117,20 +114,21 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 
 	// Start a transaction to ensure atomicity
 	tx := l.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("error starting transaction: %w", tx.Error)
-	}
+
 	defer func() {
-		if r := recover(); r != nil {
+		if err != nil {
 			tx.Rollback()
 		}
 	}()
 
+	if tx.Error != nil {
+		return fmt.Errorf("error starting transaction: %w", tx.Error)
+	}
+
 	// First verify we hold the lock
 	var existingLock SessionLock
-	err := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ? AND expires_at > ?", l.key, time.Now()).First(&existingLock).Error
+	err = tx.Table(l.tableNamePrefix+"session_locks").Where("key = ? AND expires_at > ?", l.key, time.Now()).First(&existingLock).Error
 	if err != nil {
-		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return sessions.ErrNotLocked
 		}
@@ -142,11 +140,9 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 		Where("key = ?", l.key).
 		Update("expires_at", time.Now().Add(expiration))
 	if result.Error != nil {
-		tx.Rollback()
 		return fmt.Errorf("error refreshing lock: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		tx.Rollback()
 		return sessions.ErrNotLocked
 	}
 
@@ -154,7 +150,7 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 }
 
 // Release releases the lock by deleting the record from the session_lock table
-func (l *Lock) Release(ctx context.Context) error {
+func (l *Lock) Release(ctx context.Context) (err error) {
 	// Verify database connection is healthy
 	if err := l.verifyConnection(ctx); err != nil {
 		return fmt.Errorf("database connection error: %w", err)
@@ -162,29 +158,28 @@ func (l *Lock) Release(ctx context.Context) error {
 
 	// Start a transaction to ensure atomicity
 	tx := l.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("error starting transaction: %w", tx.Error)
-	}
+
 	defer func() {
-		if r := recover(); r != nil {
+		if err != nil {
 			tx.Rollback()
 		}
 	}()
 
+	if tx.Error != nil {
+		return fmt.Errorf("error starting transaction: %w", tx.Error)
+	}
+
 	// Clean up expired locks
 	if err := tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
-		tx.Rollback()
 		return fmt.Errorf("error cleaning up expired locks: %w", err)
 	}
 
 	// Delete the lock
 	result := tx.Table(l.tableNamePrefix+"session_locks").Where("key = ?", l.key).Delete(&SessionLock{})
 	if result.Error != nil {
-		tx.Rollback()
 		return fmt.Errorf("error releasing lock: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		tx.Rollback()
 		return sessions.ErrNotLocked
 	}
 
