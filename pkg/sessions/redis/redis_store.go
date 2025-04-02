@@ -37,7 +37,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 // Save takes a sessions.SessionState and stores the information from it
 // to redis, and adds a new persistence cookie on the HTTP response writer
-func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
+func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration, _, _ string) error {
 	err := store.Client.Set(ctx, key, value, exp)
 	if err != nil {
 		return fmt.Errorf("error saving redis session: %v", err)
