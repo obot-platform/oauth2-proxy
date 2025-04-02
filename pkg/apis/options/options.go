@@ -156,6 +156,11 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
+	flagSet.String("postgres-connection-dsn", "", "DSN of postgres server for postgres session storage (eg: postgres://[USER[:PASSWORD]@]HOST[:PORT]/DBNAME)")
+	flagSet.Int("postgres-max-idle-conns", 10, "Maximum number of idle connections to postgres")
+	flagSet.Int("postgres-max-open-conns", 100, "Maximum number of open connections to postgres")
+	flagSet.Int("postgres-conn-max-lifetime", 3600, "Maximum lifetime of a connection to postgres in seconds")
+	flagSet.String("postgres-table-name-prefix", "", "Prefix for postgres table names")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
