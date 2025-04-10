@@ -32,7 +32,7 @@ func NewMockStore() *MockStore {
 }
 
 // Save sets a key to the data to the memory cache
-func (s *MockStore) Save(_ context.Context, key string, value []byte, exp time.Duration) error {
+func (s *MockStore) Save(_ context.Context, key string, value []byte, exp time.Duration, _, _ string) error {
 	s.cache[key] = entry{
 		data:       value,
 		expiration: exp,
