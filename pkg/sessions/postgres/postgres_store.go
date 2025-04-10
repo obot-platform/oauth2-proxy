@@ -91,6 +91,11 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 // Clear clears any saved session information for a given persistence cookie
 // from PostgreSQL, and then clears the session
 func (store *SessionStore) Clear(ctx context.Context, key string) error {
+	var session Session
+	if err := store.db.WithContext(ctx).Table(store.tableNamePrefix+"sessions").Where("key = ?", key).First(&session).Error; err != nil {
+		// We are deliberately not using the logger here, since we disable the normal logging for oauth2-proxy, but still want to see this.
+		fmt.Printf("Error clearing session from postgres with ID: %s for user hash: %x and email hash: %x\n", key, session.User, session.Email)
+	}
 	result := store.db.WithContext(ctx).Table(store.tableNamePrefix+"sessions").Where("key = ?", key).Delete(&Session{})
 	if result.Error != nil {
 		return fmt.Errorf("error clearing the session from postgres: %v", result.Error)
