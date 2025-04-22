@@ -92,6 +92,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			// In the case when there was an error loading the session,
 			// we should clear the session
 			logger.Errorf("Error loading cookied session: %v, removing session", err)
+
+			// Adding another log with printf here since we disable the normal logging.
+			fmt.Printf("oauth2-proxy: Error loading cookied session: %v, removing session\n", err)
 			err = s.store.Clear(rw, req)
 			if err != nil {
 				logger.Errorf("Error removing session: %v", err)

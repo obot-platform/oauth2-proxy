@@ -1126,6 +1126,8 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session (%s): removing session %s", cause, session)
+		// Adding another log with printf here since we disable the normal logging.
+		fmt.Printf("oauth2-proxy: Invalid authorization via session (%s): removing session %s with email %s\n", cause, session, session.Email)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
