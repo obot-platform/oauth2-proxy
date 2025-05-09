@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"gorm.io/gorm"
 )
@@ -23,7 +23,6 @@ type Lock struct {
 	db              *gorm.DB
 	key             string
 	tableNamePrefix string
-	lock            *sync.Mutex
 }
 
 // NewLock creates a new PostgreSQL lock instance
@@ -32,16 +31,12 @@ func NewLock(db *gorm.DB, key string, tableNamePrefix string) sessions.Lock {
 		db:              db,
 		key:             key,
 		tableNamePrefix: tableNamePrefix,
-		lock:            &sync.Mutex{},
 	}
 }
 
 // Obtain obtains a lock by inserting a record into the session_lock table.
 // If a lock already exists and hasn't expired, it will return ErrLockNotObtained.
 func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	tx := l.db.WithContext(ctx).Begin()
 
 	defer func() {
@@ -81,6 +76,12 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error)
 		ExpiresAt: time.Now().Add(expiration),
 	}
 	if err = tx.Table(l.tableNamePrefix + "session_locks").Create(lock).Error; err != nil {
+		// Check for PostgreSQL unique constraint violation error (code 23505)
+		// which indicates another process has obtained the lock
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return sessions.ErrLockNotObtained
+		}
 		return fmt.Errorf("error creating lock: %w", err)
 	}
 
@@ -89,9 +90,6 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error)
 
 // Peek checks if the lock is still held by checking if it exists and hasn't expired
 func (l *Lock) Peek(ctx context.Context) (bool, error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	// Verify database connection is healthy
 	if err := l.verifyConnection(ctx); err != nil {
 		return false, fmt.Errorf("database connection error: %w", err)
@@ -116,9 +114,6 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 
 // Refresh refreshes the lock by updating its expiration time
 func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) (err error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	// Verify database connection is healthy
 	if err := l.verifyConnection(ctx); err != nil {
 		return fmt.Errorf("database connection error: %w", err)
@@ -163,9 +158,6 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) (err error
 
 // Release releases the lock by deleting the record from the session_lock table
 func (l *Lock) Release(ctx context.Context) (err error) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	// Verify database connection is healthy
 	if err := l.verifyConnection(ctx); err != nil {
 		return fmt.Errorf("database connection error: %w", err)
