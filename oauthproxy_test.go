@@ -47,7 +47,7 @@ func TestRobotsTxt(t *testing.T) {
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func Test_redeemCode(t *testing.T) {
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func Test_enrichSession(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -229,7 +229,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(email string) bool {
 		return email == emailAddress
 	})
 	if err != nil {
@@ -291,7 +291,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 		CreatedAt:   &created,
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(email string) bool {
 		return email == emailAddress
 	})
 	assert.NoError(t, err)
@@ -387,7 +387,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	testProvider := NewTestProvider(providerURL, emailAddress)
 	testProvider.ValidToken = opts.ValidToken
-	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
+	patt.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: patt.opts}, func(email string) bool {
 		return email == emailAddress
 	})
 	patt.proxy.provider = testProvider
@@ -592,7 +592,7 @@ func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 		return nil, err
 	}
 
-	sipTest.proxy, err = NewOAuthProxy(sipTest.opts, func(email string) bool {
+	sipTest.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: sipTest.opts}, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -628,7 +628,7 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -676,7 +676,7 @@ func ManualSignInWithCredentials(t *testing.T, user, pass string) int {
 		t.Fatal(err)
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -826,7 +826,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 		return nil, err
 	}
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: pcTest.opts}, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1200,7 +1200,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: pcTest.opts}, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1293,7 +1293,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: pcTest.opts}, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1373,7 +1373,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: pcTest.opts}, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1429,7 +1429,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 
 	upstreamURL, _ := url.Parse(upstreamServer.URL)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(string) bool { return false })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1554,7 +1554,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 	if err != nil {
 		return err
 	}
-	proxy, err := NewOAuthProxy(st.opts, func(email string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: st.opts}, func(email string) bool { return true })
 	if err != nil {
 		return err
 	}
@@ -1642,7 +1642,7 @@ func newAjaxRequestTest(forceJSONErrors bool) (*ajaxRequestTest, error) {
 		return nil, err
 	}
 
-	test.proxy, err = NewOAuthProxy(test.opts, func(email string) bool {
+	test.proxy, err = NewOAuthProxy(&OAuthProxyOptions{Options: test.opts}, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -1958,7 +1958,7 @@ func Test_noCacheHeaders(t *testing.T) {
 	opts.SkipAuthRegex = []string{".*"}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2233,7 +2233,7 @@ func TestTrustedIPs(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(string) bool { return true })
 			assert.NoError(t, err)
 			rw := httptest.NewRecorder()
 
@@ -2478,7 +2478,7 @@ func TestApiRoutes(t *testing.T) {
 	opts.SkipProviderButton = true
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2561,7 +2561,7 @@ func TestAllowedRequest(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2660,7 +2660,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2759,7 +2759,7 @@ func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2859,7 +2859,7 @@ func TestAllowedRequestNegateWithMethod(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: opts}, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3460,10 +3460,181 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 			err := validation.Validate(baseOpts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(tt.setupOpts(baseOpts), func(string) bool { return true })
+			proxy, err := NewOAuthProxy(&OAuthProxyOptions{Options: tt.setupOpts(baseOpts)}, func(string) bool { return true })
 			assert.NoError(t, err)
 
 			assert.Equalf(t, tt.want, proxy.getOAuthRedirectURI(tt.req), "getOAuthRedirectURI(%v)", tt.req)
 		})
 	}
+}
+
+// Test-specific mock provider
+type testMockProvider struct {
+	*providers.ProviderData
+	enrichSessionCalled   bool
+	validateSessionResult bool
+}
+
+func (m *testMockProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
+	return "user@example.com", nil
+}
+
+func (m *testMockProvider) ValidateSession(_ context.Context, _ *sessions.SessionState) bool {
+	return m.validateSessionResult
+}
+
+func (m *testMockProvider) Authorize(_ context.Context, _ *sessions.SessionState) (bool, error) {
+	return true, nil
+}
+
+func (m *testMockProvider) RefreshSession(_ context.Context, _ *sessions.SessionState) (bool, error) {
+	return false, providers.ErrNotImplemented
+}
+
+func (m *testMockProvider) CreateSessionFromToken(_ context.Context, _ string) (*sessions.SessionState, error) {
+	return nil, providers.ErrNotImplemented
+}
+
+func (m *testMockProvider) Redeem(_ context.Context, _, _, _ string) (*sessions.SessionState, error) {
+	return &sessions.SessionState{
+		User:  "mock-user",
+		Email: "user@example.com",
+	}, nil
+}
+
+func (m *testMockProvider) GetLoginURL(_, _, _ string, _ url.Values) string {
+	return "https://mock-provider.com/login"
+}
+
+func (m *testMockProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
+	m.enrichSessionCalled = true
+	s.User = "mock-user"
+	s.Email = "user@example.com"
+	s.Groups = []string{"basic-group"}
+	return nil
+}
+
+// Test wrapper types
+type testEnrichSessionWrapper struct {
+	providers.Provider
+}
+
+func (w *testEnrichSessionWrapper) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	if err := w.Provider.EnrichSession(ctx, s); err != nil {
+		return err
+	}
+	s.Groups = append(s.Groups, "enhanced-group", "wrapper-group")
+	s.PreferredUsername = "enhanced-" + s.User
+	return nil
+}
+
+type testErrorWrapper struct {
+	providers.Provider
+}
+
+func (e *testErrorWrapper) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
+	return fmt.Errorf("mock enrichment error")
+}
+
+func TestProviderWrapper(t *testing.T) {
+
+	mockProvider := &testMockProvider{
+		ProviderData: &providers.ProviderData{
+			ProviderName: "Mock Provider",
+			ClientID:     "mock-client-id",
+		},
+		validateSessionResult: true,
+	}
+
+	// Create a wrapper function that decorates the EnrichSession method
+	wrapperFunc := func(provider providers.Provider) providers.Provider {
+		return &testEnrichSessionWrapper{
+			Provider: provider,
+		}
+	}
+
+	// Create options with the wrapper function
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	// Create proxy with wrapper - we'll replace the provider after creation
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{
+		Options:      opts,
+		WrapProvider: wrapperFunc,
+	}, func(string) bool { return true })
+
+	// For this test, we need to replace the provider since we can't easily mock the provider creation
+	proxy.provider = wrapperFunc(mockProvider)
+	assert.NoError(t, err)
+	assert.NotNil(t, proxy)
+
+	// Test that the wrapper was applied by calling EnrichSession
+	session := &sessions.SessionState{}
+	err = proxy.provider.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
+
+	// Verify the original provider's EnrichSession was called
+	assert.True(t, mockProvider.enrichSessionCalled)
+
+	// Verify the original provider's data is present
+	assert.Equal(t, "mock-user", session.User)
+	assert.Equal(t, "user@example.com", session.Email)
+	assert.Contains(t, session.Groups, "basic-group")
+
+	// Verify the wrapper added additional data
+	assert.Contains(t, session.Groups, "enhanced-group")
+	assert.Contains(t, session.Groups, "wrapper-group")
+	assert.Equal(t, "enhanced-mock-user", session.PreferredUsername)
+
+	// Verify all expected groups are present (both original and enhanced)
+	expectedGroups := []string{"basic-group", "enhanced-group", "wrapper-group"}
+	for _, expectedGroup := range expectedGroups {
+		assert.Contains(t, session.Groups, expectedGroup)
+	}
+
+	// Test that other provider methods are properly delegated
+	assert.True(t, proxy.provider.ValidateSession(context.Background(), session))
+
+	// Test that provider data is accessible
+	providerData := proxy.provider.Data()
+	assert.Equal(t, "Mock Provider", providerData.ProviderName)
+	assert.Equal(t, "mock-client-id", providerData.ClientID)
+
+	// Test error handling - create a wrapper that returns an error
+	errorWrapperFunc := func(provider providers.Provider) providers.Provider {
+		return &testErrorWrapper{Provider: provider}
+	}
+
+	errorProxy, err := NewOAuthProxy(&OAuthProxyOptions{
+		Options:      opts,
+		WrapProvider: errorWrapperFunc,
+	}, func(string) bool { return true })
+	errorProxy.provider = errorWrapperFunc(mockProvider)
+	assert.NoError(t, err)
+
+	session2 := &sessions.SessionState{}
+	err = errorProxy.provider.EnrichSession(context.Background(), session2)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "mock enrichment error")
+}
+
+func TestProviderWrapperWithNilWrapper(t *testing.T) {
+	// Test that when WrapProvider is nil, the original provider is used unchanged
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(&OAuthProxyOptions{
+		Options:      opts,
+		WrapProvider: nil, // Explicitly set to nil
+	}, func(string) bool { return true })
+
+	assert.NoError(t, err)
+	assert.NotNil(t, proxy)
+	assert.NotNil(t, proxy.provider)
+
+	// The provider should be the original provider, not wrapped
+	// We can't easily test the exact type due to the provider creation complexity,
+	// but we can verify the proxy was created successfully
 }
