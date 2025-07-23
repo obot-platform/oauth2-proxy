@@ -116,8 +116,15 @@ type OAuthProxy struct {
 	encodeState bool
 }
 
+type WrapProviderFunc func(providers.Provider) providers.Provider
+
+type OAuthProxyOptions struct {
+	*options.Options
+	WrapProvider WrapProviderFunc
+}
+
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+func NewOAuthProxy(opts *OAuthProxyOptions, validator func(string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -138,6 +145,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
 
+	if opts.WrapProvider != nil {
+		provider = opts.WrapProvider(provider)
+	}
+
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
 		TemplatesPath:    opts.Templates.Path,
 		CustomLogo:       opts.Templates.CustomLogo,
@@ -146,7 +157,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Version:          version.VERSION,
 		Debug:            opts.Templates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
-		SignInMessage:    buildSignInMessage(opts),
+		SignInMessage:    buildSignInMessage(opts.Options),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
 	if err != nil {
@@ -186,22 +197,22 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
-	allowedRoutes, err := buildRoutesAllowlist(opts)
+	allowedRoutes, err := buildRoutesAllowlist(opts.Options)
 	if err != nil {
 		return nil, err
 	}
 
-	apiRoutes, err := buildAPIRoutes(opts)
+	apiRoutes, err := buildAPIRoutes(opts.Options)
 	if err != nil {
 		return nil, err
 	}
 
-	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
+	preAuthChain, err := buildPreAuthChain(opts.Options, sessionStore)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
-	headersChain, err := buildHeadersChain(opts)
+	sessionChain := buildSessionChain(opts.Options, provider, sessionStore, basicAuthValidator)
+	headersChain, err := buildHeadersChain(opts.Options)
 	if err != nil {
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
@@ -247,7 +258,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
-	if err := p.setupServer(opts); err != nil {
+	if err := p.setupServer(opts.Options); err != nil {
 		return nil, fmt.Errorf("error setting up server: %v", err)
 	}
 
