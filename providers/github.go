@@ -161,6 +161,33 @@ func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
+// RefreshSession refreshes the session by re-validating org/team membership.
+// This is critical for security: even if the GitHub access token is still valid,
+// the user's org/team membership may have changed. We must re-fetch and re-validate
+// to ensure users who are removed from required orgs/teams lose access.
+func (p *GitHubProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.AccessToken == "" {
+		return false, nil
+	}
+
+	// Re-fetch org and team membership if restrictions are configured.
+	// Clear existing groups first to ensure we have fresh data from GitHub.
+	if p.Org != "" || p.Team != "" {
+		s.Groups = nil
+		if err := p.getOrgAndTeam(ctx, s); err != nil {
+			return false, fmt.Errorf("failed to fetch org/team membership: %v", err)
+		}
+	}
+
+	// Re-validate all restrictions (org, team, repo, allowed users).
+	// If the user no longer meets the requirements, their session must be invalidated.
+	if err := p.checkRestrictions(ctx, s); err != nil {
+		return false, fmt.Errorf("user no longer meets access requirements: %v", err)
+	}
+
+	return true, nil
+}
+
 func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
 	// https://developer.github.com/v3/orgs/#list-your-organizations
 	var orgs []string
