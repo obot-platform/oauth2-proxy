@@ -24,6 +24,7 @@ type Options struct {
 	ReadyPath           string   `flag:"ready-path" cfg:"ready_path"`
 	ReverseProxy        bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
 	RealClientIPHeader  string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	TrustedProxyIPs     []string `flag:"trusted-proxy-ip" cfg:"trusted_proxy_ips"`
 	TrustedIPs          []string `flag:"trusted-ip" cfg:"trusted_ips"`
 	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
@@ -52,17 +53,18 @@ type Options struct {
 
 	Providers Providers `cfg:",internal"`
 
-	APIRoutes             []string `flag:"api-route" cfg:"api_routes"`
-	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
-	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
-	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
-	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
-	EncodeState           bool     `flag:"encode-state" cfg:"encode_state"`
-	AllowQuerySemicolons  bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
+	APIRoutes                []string `flag:"api-route" cfg:"api_routes"`
+	SkipAuthRegex            []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthRoutes           []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
+	SkipJwtBearerTokens      bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
+	BearerTokenLoginFallback bool     `flag:"bearer-token-login-fallback" cfg:"bearer_token_login_fallback"`
+	ExtraJwtIssuers          []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	SkipProviderButton       bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
+	SSLInsecureSkipVerify    bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SkipAuthPreflight        bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
+	ForceJSONErrors          bool     `flag:"force-json-errors" cfg:"force_json_errors"`
+	EncodeState              bool     `flag:"encode-state" cfg:"encode_state"`
+	AllowQuerySemicolons     bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -97,17 +99,18 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:        "/oauth2",
-		Providers:          providerDefaults(),
-		PingPath:           "/ping",
-		ReadyPath:          "/ready",
-		RealClientIPHeader: "X-Real-IP",
-		ForceHTTPS:         false,
-		Cookie:             cookieDefaults(),
-		Session:            sessionOptionsDefaults(),
-		Templates:          templatesDefaults(),
-		SkipAuthPreflight:  false,
-		Logging:            loggingDefaults(),
+		BearerTokenLoginFallback: true,
+		ProxyPrefix:              "/oauth2",
+		Providers:                providerDefaults(),
+		PingPath:                 "/ping",
+		ReadyPath:                "/ready",
+		RealClientIPHeader:       "X-Real-IP",
+		ForceHTTPS:               false,
+		Cookie:                   cookieDefaults(),
+		Session:                  sessionOptionsDefaults(),
+		Templates:                templatesDefaults(),
+		SkipAuthPreflight:        false,
+		Logging:                  loggingDefaults(),
 	}
 }
 
@@ -117,6 +120,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, X-Envoy-External-Address, or CF-Connecting-IP)")
+	flagSet.StringSlice("trusted-proxy-ip", []string{}, "list of IPs or CIDR ranges that are allowed to set X-Forwarded-* headers when --reverse-proxy is enabled. Defaults to trusting all IPs for backwards compatibility; configure this to your reverse proxy addresses to prevent header spoofing.")
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
@@ -128,6 +132,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Bool("bearer-token-login-fallback", true, "if skip-jwt-bearer-tokens is set, fall back to normal login redirect with an invalid JWT. If false, 403 instead")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
@@ -164,4 +169,24 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(templatesFlagSet())
 
 	return flagSet
+}
+
+// EnsureDefaults configures the defaults for all options
+// to ensure no unexpected empty strings for enum types or nils for booleans
+func (o *Options) EnsureDefaults() {
+	o.Providers.EnsureDefaults()
+	o.UpstreamServers.EnsureDefaults()
+
+	for i := range o.InjectRequestHeaders {
+		o.InjectRequestHeaders[i].EnsureDefaults()
+	}
+	for i := range o.InjectResponseHeaders {
+		o.InjectResponseHeaders[i].EnsureDefaults()
+	}
+
+	// TBD: Uncomment as we add EnsureDefaults methods
+	// o.Cookie.EnsureDefaults()
+	// o.Session.EnsureDefaults()
+	// o.Templates.EnsureDefaults()
+	// o.Logging.EnsureDefaults()
 }
