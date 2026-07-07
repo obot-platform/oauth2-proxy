@@ -119,8 +119,32 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				Value: encoded,
 			}
 
-			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.Expire)
+			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.CSRFExpire)
 			Expect(valid).To(BeTrue())
+		})
+
+		It("validates CSRF token using CSRFExpire when Expire is lower", func() {
+			// Set Expire to be much lower than CSRFExpire
+			cookieOpts.Expire = time.Second
+			cookieOpts.CSRFExpire = time.Hour
+
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
+
+			encoded, err := privateCSRF.encodeCookie()
+			Expect(err).ToNot(HaveOccurred())
+
+			cookie := &http.Cookie{
+				Name:  privateCSRF.cookieName(),
+				Value: encoded,
+			}
+
+			// The cookie should still be valid even though Expire is only 1 second
+			decoded, err := decodeCSRFCookie(cookie, cookieOpts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(decoded).ToNot(BeNil())
+			Expect(decoded.OAuthState).To(Equal([]byte(csrfState)))
+			Expect(decoded.OIDCNonce).To(Equal([]byte(csrfNonce)))
 		})
 	})
 
@@ -130,7 +154,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		testNow := time.Unix(nowEpoch, 0)
 
 		BeforeEach(func() {
-			privateCSRF.time.Set(testNow)
+			privateCSRF.clock = func() time.Time { return testNow }
 
 			req = &http.Request{
 				Method: http.MethodGet,
@@ -146,7 +170,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		})
 
 		AfterEach(func() {
-			privateCSRF.time.Reset()
+			privateCSRF.clock = time.Now
 		})
 
 		Context("SetCookie", func() {
@@ -173,7 +197,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Context("LoadCSRFCookie", func() {
 			BeforeEach(func() {
 				// we need to reset the time to ensure the cookie is valid
-				privateCSRF.time.Reset()
+				privateCSRF.clock = time.Now
 			})
 
 			It("should return error when no cookie is set", func() {
@@ -252,6 +276,265 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			It("has the cookie options name as a base", func() {
 				Expect(privateCSRF.cookieName()).To(ContainSubstring(cookieName))
 			})
+		})
+	})
+
+	Context("Test Cookie SameSite", func() {
+		var req *http.Request
+		var cookieOpts *options.Cookie
+
+		testNow := time.Unix(nowEpoch, 0)
+
+		BeforeEach(func() {
+			// we need to reset the time to ensure the cookie is valid
+			privateCSRF.clock = time.Now
+
+			req = &http.Request{
+				Method: http.MethodGet,
+				Proto:  "HTTP/1.1",
+				Host:   cookieDomain,
+
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   cookieDomain,
+					Path:   cookiePath,
+				},
+			}
+
+			cookieOpts = &options.Cookie{
+				Name:           cookieName,
+				Secret:         cookieSecret,
+				Domains:        []string{cookieDomain},
+				Path:           cookiePath,
+				Expire:         time.Hour,
+				Secure:         true,
+				HTTPOnly:       true,
+				CSRFPerRequest: false,
+				CSRFExpire:     time.Hour,
+			}
+		})
+
+		It("Call SetCookie when CSRF SameSite is not defined. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			_, err := CSRF.SetCookie(rw, req)
+
+			// validate
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+				fmt.Sprintf(
+					"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Lax",
+					cookiePath,
+					cookieDomain,
+					int(cookieOpts.CSRFExpire.Seconds()),
+				),
+			))
+		})
+
+		It("Call SetCookie when CSRF SameSite is an empty string. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = ""
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			_, err := CSRF.SetCookie(rw, req)
+
+			// validate
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+				fmt.Sprintf(
+					"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Lax",
+					cookiePath,
+					cookieDomain,
+					int(cookieOpts.CSRFExpire.Seconds()),
+				),
+			))
+		})
+
+		It("Call SetCookie when CSRF SameSite is 'none'. Expected result: CSRF cookie SameSite is None.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = sameSiteNone
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			_, err := CSRF.SetCookie(rw, req)
+
+			// validate
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+				fmt.Sprintf(
+					"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None",
+					cookiePath,
+					cookieDomain,
+					int(cookieOpts.CSRFExpire.Seconds()),
+				),
+			))
+		})
+
+		It("Call SetCookie when CSRF SameSite is 'strict'. Expected result: CSRF cookie SameSite is Strict.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = sameSiteStrict
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			_, err := CSRF.SetCookie(rw, req)
+
+			// validate
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+				fmt.Sprintf(
+					"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Strict",
+					cookiePath,
+					cookieDomain,
+					int(cookieOpts.CSRFExpire.Seconds()),
+				),
+			))
+		})
+
+		It("Call SetCookie when CSRF SameSite is 'lax'. Expected result: CSRF cookie SameSite is Lax.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteStrict
+			cookieOpts.CSRFSameSite = sameSiteLax
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			_, err := CSRF.SetCookie(rw, req)
+
+			// validate
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+				fmt.Sprintf(
+					"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Lax",
+					cookiePath,
+					cookieDomain,
+					int(cookieOpts.CSRFExpire.Seconds()),
+				),
+			))
+		})
+
+		It("Call ClearCookie when CSRF SameSite is not defined. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			CSRF.ClearCookie(rw, req)
+
+			// validate
+			Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				fmt.Sprintf(
+					"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+					CSRF.(*csrf).cookieName(),
+					cookiePath,
+					cookieDomain,
+				),
+			))
+		})
+
+		It("Call ClearCookie when CSRF SameSite is an empty string. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = ""
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			CSRF.ClearCookie(rw, req)
+
+			// validate
+			Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				fmt.Sprintf(
+					"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+					CSRF.(*csrf).cookieName(),
+					cookiePath,
+					cookieDomain,
+				),
+			))
+		})
+
+		It("Call ClearCookie when CSRF SameSite is 'none'. Expected result: CSRF cookie SameSite is None.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = sameSiteNone
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			CSRF.ClearCookie(rw, req)
+
+			// validate
+			Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				fmt.Sprintf(
+					"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=None",
+					CSRF.(*csrf).cookieName(),
+					cookiePath,
+					cookieDomain,
+				),
+			))
+		})
+
+		It("Call ClearCookie when CSRF SameSite is 'strict'. Expected result: CSRF cookie SameSite is Strict.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = sameSiteStrict
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			CSRF.ClearCookie(rw, req)
+
+			// validate
+			Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				fmt.Sprintf(
+					"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Strict",
+					CSRF.(*csrf).cookieName(),
+					cookiePath,
+					cookieDomain,
+				),
+			))
+		})
+
+		It("Call ClearCookie when CSRF SameSite is 'lax'. Expected result: CSRF cookie SameSite is Lax.", func() {
+			// prepare
+			cookieOpts.SameSite = sameSiteStrict
+			cookieOpts.CSRFSameSite = sameSiteLax
+			CSRF, _ := NewCSRF(cookieOpts, "verifier")
+			rw := httptest.NewRecorder()
+			CSRF.(*csrf).clock = func() time.Time { return testNow }
+
+			// test
+			CSRF.ClearCookie(rw, req)
+
+			// validate
+			Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				fmt.Sprintf(
+					"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+					CSRF.(*csrf).cookieName(),
+					cookiePath,
+					cookieDomain,
+				),
+			))
 		})
 	})
 })
