@@ -146,7 +146,11 @@ func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ti
 	}
 
 	// An existing cookie exists, try to retrieve the ticket
-	val, _, ok := encryption.Validate(requestCookie, cookieOpts.Secret, cookieOpts.Expire)
+	secret, err := cookieOpts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	val, _, ok := encryption.Validate(requestCookie, secret, cookieOpts.Expire)
 	if !ok {
 		return nil, fmt.Errorf("session ticket cookie failed validation: %v", err)
 	}
@@ -217,31 +221,45 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 // clearCookie removes any cookies that would be where this ticket
 // would set them
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		"",
-		t.options,
-		time.Hour*-1,
-	))
+	cookieOptions := &cookies.CookieOptions{
+		Name:       t.options.Name,
+		Value:      "",
+		Domains:    t.options.Domains,
+		Expiration: time.Hour * -1,
+		SameSite:   t.options.SameSite,
+		Path:       t.options.Path,
+		HTTPOnly:   t.options.HTTPOnly,
+		Secure:     t.options.Secure,
+	}
+	http.SetCookie(rw, cookies.MakeCookieFromOptions(req, cookieOptions))
 }
 
 // makeCookie makes a cookie, signing the value if present
 func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) (*http.Cookie, error) {
 	if value != "" {
-		var err error
-		value, err = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
+		secret, err := t.options.GetSecret()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("retrieving secret failed: %w", err)
+		}
+
+		value, err = encryption.SignedValue(secret, t.options.Name, []byte(value), now)
+		if err != nil {
+			return nil, fmt.Errorf("signing cookie value failed: %w", err)
 		}
 	}
-	return cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		value,
-		t.options,
-		expires,
-	), nil
+
+	cookieOptions := &cookies.CookieOptions{
+		Name:       t.options.Name,
+		Value:      value,
+		Domains:    t.options.Domains,
+		Expiration: expires,
+		SameSite:   t.options.SameSite,
+		Path:       t.options.Path,
+		HTTPOnly:   t.options.HTTPOnly,
+		Secure:     t.options.Secure,
+	}
+
+	return cookies.MakeCookieFromOptions(req, cookieOptions), nil
 }
 
 // makeCipher makes a AES-GCM cipher out of the ticket's secret
