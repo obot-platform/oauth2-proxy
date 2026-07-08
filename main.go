@@ -13,6 +13,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+//nolint:unused
 func main() {
 	logger.SetFlags(logger.Lshortfile)
 
@@ -161,6 +162,8 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 
 // printConvertedConfig extracts alpha options from the loaded configuration
 // and renders these to stdout in YAML format.
+//
+//nolint:unused
 func printConvertedConfig(opts *options.Options) error {
 	alphaConfig := options.NewAlphaOptions(opts)
 
