@@ -21,11 +21,7 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		// Get DSN from environment or use default
 		dsn := os.Getenv("POSTGRES_DSN")
-		if dsn == "" {
-			dsn = "postgres://postgres:postgres@localhost:5432/oauth2_proxy_test?sslmode=disable"
-		}
 
 		// Create test database connection
 		var err error
@@ -64,13 +60,8 @@ var _ = Describe("PostgreSQL SessionStore Tests", func() {
 
 	tests.RunSessionStoreTests(
 		func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-			// Set the connection URL from environment or default
-			dsn := os.Getenv("POSTGRES_DSN")
-			if dsn == "" {
-				dsn = "postgres://postgres:postgres@localhost:5432/oauth2_proxy_test?sslmode=disable"
-			}
 			opts.Type = options.PostgresSessionStoreType
-			opts.Postgres.ConnectionDSN = dsn
+			opts.Postgres.ConnectionDSN = os.Getenv("POSTGRES_DSN")
 			opts.Postgres.TableNamePrefix = "oauth2_proxy_test_"
 
 			// Create new session store

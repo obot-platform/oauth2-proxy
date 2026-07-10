@@ -56,5 +56,10 @@ func sessionOptionsDefaults() SessionOptions {
 		Cookie: CookieStoreOptions{
 			Minimal: false,
 		},
+		Postgres: PostgresStoreOptions{
+			MaxIdleConns:    10,
+			MaxOpenConns:    100,
+			ConnMaxLifetime: 3600,
+		},
 	}
 }

@@ -111,6 +111,17 @@ var (
 	}
 )
 
+func TestDefaultURLCopiesDefault(t *testing.T) {
+	defaultValue, err := url.Parse("https://example.com/default")
+	assert.NoError(t, err)
+
+	actual := defaultURL(nil, defaultValue)
+	actual.Path = "/changed"
+
+	assert.NotSame(t, defaultValue, actual)
+	assert.Equal(t, "/default", defaultValue.Path)
+}
+
 type idTokenClaims struct {
 	Name     string      `json:"preferred_username,omitempty"`
 	Email    string      `json:"email,omitempty"`

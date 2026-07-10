@@ -220,6 +220,7 @@ func TestScope(t *testing.T) {
 		configuredScope string
 		expectedScope   string
 		allowedGroups   []string
+		githubOrg       string
 	}{
 		{
 			name:            "oidc: with no scope provided",
@@ -264,7 +265,14 @@ func TestScope(t *testing.T) {
 			name:            "github: with no scope provided",
 			configuredType:  "github",
 			configuredScope: "",
+			expectedScope:   "user:email",
+		},
+		{
+			name:            "github: with no scope provided and an organization",
+			configuredType:  "github",
+			configuredScope: "",
 			expectedScope:   "user:email read:org",
+			githubOrg:       "example",
 		},
 		{
 			name:            "github: with a configured scope provided",
@@ -305,6 +313,7 @@ func TestScope(t *testing.T) {
 			RedeemURL:        msTokenURL,
 			Scope:            tc.configuredScope,
 			AllowedGroups:    tc.allowedGroups,
+			GitHubConfig:     options.GitHubOptions{Org: tc.githubOrg},
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:     msIssuerURL,
 				SkipDiscovery: ptr.To(true),
