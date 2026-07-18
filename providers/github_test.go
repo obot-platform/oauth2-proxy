@@ -41,7 +41,6 @@ func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 		"/user/emails": {""},
 		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
-		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		// GitHub Enterprise Server API
 		"/api/v3":             {""},
 		"/api/v3/user/emails": {""},

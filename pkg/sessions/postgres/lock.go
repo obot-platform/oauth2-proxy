@@ -49,11 +49,6 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error)
 		return fmt.Errorf("error starting transaction: %w", tx.Error)
 	}
 
-	// Verify database connection is healthy
-	if err = l.verifyConnection(ctx); err != nil {
-		return
-	}
-
 	// Clean up expired locks
 	if err = tx.Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		return fmt.Errorf("error cleaning up expired locks: %w", err)
@@ -90,11 +85,6 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) (err error)
 
 // Peek checks if the lock is still held by checking if it exists and hasn't expired
 func (l *Lock) Peek(ctx context.Context) (bool, error) {
-	// Verify database connection is healthy
-	if err := l.verifyConnection(ctx); err != nil {
-		return false, fmt.Errorf("database connection error: %w", err)
-	}
-
 	// Clean up expired locks
 	if err := l.db.WithContext(ctx).Table(l.tableNamePrefix+"session_locks").Where("expires_at < ?", time.Now()).Delete(&SessionLock{}).Error; err != nil {
 		return false, fmt.Errorf("error cleaning up expired locks: %w", err)
@@ -114,11 +104,6 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 
 // Refresh refreshes the lock by updating its expiration time
 func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) (err error) {
-	// Verify database connection is healthy
-	if err := l.verifyConnection(ctx); err != nil {
-		return fmt.Errorf("database connection error: %w", err)
-	}
-
 	// Start a transaction to ensure atomicity
 	tx := l.db.WithContext(ctx).Begin()
 
@@ -158,11 +143,6 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) (err error
 
 // Release releases the lock by deleting the record from the session_lock table
 func (l *Lock) Release(ctx context.Context) (err error) {
-	// Verify database connection is healthy
-	if err := l.verifyConnection(ctx); err != nil {
-		return fmt.Errorf("database connection error: %w", err)
-	}
-
 	// Start a transaction to ensure atomicity
 	tx := l.db.WithContext(ctx).Begin()
 
@@ -191,16 +171,4 @@ func (l *Lock) Release(ctx context.Context) (err error) {
 	}
 
 	return tx.Commit().Error
-}
-
-// verifyConnection checks if the database connection is healthy
-func (l *Lock) verifyConnection(ctx context.Context) error {
-	sqlDB, err := l.db.DB()
-	if err != nil {
-		return fmt.Errorf("error getting database instance: %w", err)
-	}
-	if err := sqlDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("error pinging database: %w", err)
-	}
-	return nil
 }
