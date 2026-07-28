@@ -13,7 +13,8 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func main() {
+// Main runs the oauth2-proxy command.
+func Main() {
 	logger.SetFlags(logger.Lshortfile)
 
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
