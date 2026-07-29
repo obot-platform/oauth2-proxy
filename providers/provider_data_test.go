@@ -40,6 +40,14 @@ const (
 	failureIssuer = "this-id-fails-verification"
 )
 
+func TestDefaultURLReturnsCopy(t *testing.T) {
+	defaultValue := &url.URL{Scheme: "https", Host: "example.com"}
+	result := defaultURL(nil, defaultValue)
+
+	result.Host = "mutated.example.com"
+	assert.Equal(t, "example.com", defaultValue.Host)
+}
+
 var (
 	verified   = true
 	unverified = false
