@@ -265,7 +265,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: false,
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
-			ExpectedError:   errors.New("email in id_token (unverified@email.com) isn't verified"),
+			ExpectedError:   fmt.Errorf("%w: email in id_token (unverified@email.com) isn't verified", ErrEmailNotVerified),
 		},
 		"Unverified Allowed": {
 			IDToken:         unverifiedIDToken,

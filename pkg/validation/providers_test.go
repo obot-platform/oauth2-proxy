@@ -45,9 +45,8 @@ var _ = Describe("Providers", func() {
 		},
 	}
 
-	validLoginGovProvider := options.Provider{
-		Type:         "login.gov",
-		ID:           "ProviderIDLoginGov",
+	validSecondProvider := options.Provider{
+		ID:           "ProviderID2",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
 	}
@@ -76,7 +75,7 @@ var _ = Describe("Providers", func() {
 			options: &options.Options{
 				Providers: options.Providers{
 					validProvider,
-					validLoginGovProvider,
+					validSecondProvider,
 				},
 			},
 			errStrings: []string{},
@@ -103,7 +102,7 @@ var _ = Describe("Providers", func() {
 				SkipProviderButton: true,
 				Providers: options.Providers{
 					validProvider,
-					validLoginGovProvider,
+					validSecondProvider,
 				},
 			},
 			errStrings: []string{skipButtonAndMultipleProvidersMsg},
