@@ -95,22 +95,6 @@ GitHub's required reviews and CODEOWNERS rules are the authoritative merge
 approval process. Reviewers should use GitHub's native review interface to
 approve changes.
 
-### GitHub commands
-
-Prow-style commands may be posted as their own line in issue and pull request
-comments:
-
-- `/assign` and `/unassign` assign or unassign users.
-- `/area`, `/kind`, and `/provider` apply a configured classification label.
-- `/help` adds the `help wanted` label.
-
-On pull requests only, project reviewers may also use `/lgtm` and
-`/lgtm cancel` to manage the review-readiness label.
-Use the command rather than manually applying the label.
-The label does not merge a pull request or replace GitHub approval requirements.
-
-Issues and pull requests require a `kind/*` label. Use `/kind <value>` to add one.
-
 ## AI use
 
 OAuth2 Proxy is built by humans for humans. Authentication and authorization
