@@ -68,6 +68,44 @@ func TestRobotsTxt(t *testing.T) {
 	assert.Equal(t, "User-agent: *\nDisallow: /\n", rw.Body.String())
 }
 
+func TestErrorPageStaticAssets(t *testing.T) {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name            string
+		path            string
+		wantContentType string
+	}{
+		{
+			name:            "stylesheet",
+			path:            "/oauth2/static/css/obot-error.min.css",
+			wantContentType: "text/css",
+		},
+		{
+			name:            "logo",
+			path:            "/oauth2/static/images/obot-icon-grumpy-blue.svg",
+			wantContentType: "image/svg+xml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, tt.path, nil)
+			proxy.ServeHTTP(rw, req)
+			assert.Equal(t, http.StatusOK, rw.Code)
+			assert.Contains(t, rw.Header().Get("Content-Type"), tt.wantContentType)
+		})
+	}
+}
+
 type TestProvider struct {
 	*providers.ProviderData
 	EmailAddress   string
