@@ -12,7 +12,7 @@
 
 OAuth2 Proxy is a flexible, open-source tool that can act as either a standalone reverse proxy or a middleware component integrated into existing reverse proxy or load balancer setups. It provides a simple and secure way to protect your web applications with OAuth2 / OIDC authentication. As a reverse proxy, it intercepts requests to your application and redirects users to an OAuth2 provider for authentication. As a middleware, it can be seamlessly integrated into your existing infrastructure to handle authentication for multiple applications.
 
-OAuth2 Proxy supports a lot of OAuth2 as well as OIDC providers. Either through a generic OIDC client or a specific implementation for Google, Microsoft Entra ID, GitHub, login.gov and others. Through specialised provider implementations OAuth2 Proxy can extract more details about the user like preferred usernames and groups. Those details can then be forwarded as HTTP headers to your upstream applications.
+OAuth2 Proxy supports a lot of OAuth2 as well as OIDC providers. Either through a generic OIDC client or a specific implementation for Google, Microsoft Entra ID, GitHub and others. Through specialised provider implementations OAuth2 Proxy can extract more details about the user like preferred usernames and groups. Those details can then be forwarded as HTTP headers to your upstream applications.
 
 ![Simplified Architecture](docs/static/img/simplified-architecture.svg)
 

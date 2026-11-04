@@ -59,7 +59,6 @@ const sidebars = {
             "configuration/providers/keycloak",
             "configuration/providers/keycloak_oidc",
             "configuration/providers/linkedin",
-            "configuration/providers/login_gov",
             "configuration/providers/ms_entra_id",
             "configuration/providers/nextcloud",
             "configuration/providers/openid_connect",

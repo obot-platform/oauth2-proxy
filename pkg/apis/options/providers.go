@@ -91,8 +91,6 @@ type Provider struct {
 	// OIDCConfig holds all configurations for OIDC provider
 	// or providers utilize OIDC configurations.
 	OIDCConfig OIDCOptions `yaml:"oidcConfig,omitempty"`
-	// LoginGovConfig holds all configurations for LoginGov provider.
-	LoginGovConfig LoginGovOptions `yaml:"loginGovConfig,omitempty"`
 
 	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
@@ -143,7 +141,7 @@ type Provider struct {
 
 // ProviderType is used to enumerate the different provider type options
 // Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
-// gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+// gitlab, google, keycloak, keycloak-oidc, linkedin, nextcloud
 // and oidc.
 type ProviderType string
 
@@ -186,9 +184,6 @@ const (
 
 	// LinkedInProvider is the provider type for LinkedIn
 	LinkedInProvider ProviderType = "linkedin"
-
-	// LoginGovProvider is the provider type for LoginGov
-	LoginGovProvider ProviderType = "login.gov"
 
 	// NextCloudProvider is the provider type for NextCloud
 	NextCloudProvider ProviderType = "nextcloud"
@@ -328,15 +323,6 @@ type OIDCOptions struct {
 	// between this list and the provider's discovered supported algorithms.
 	// By default `RS256` is used if nothing has been discovered or specified.
 	EnabledSigningAlgs []string `yaml:"enabledSigningAlgs,omitempty"`
-}
-
-type LoginGovOptions struct {
-	// JWTKey is a private key in PEM format used to sign JWT,
-	JWTKey string `yaml:"jwtKey,omitempty"`
-	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT
-	JWTKeyFile string `yaml:"jwtKeyFile,omitempty"`
-	// PubJWKURL is the JWK pubkey access endpoint
-	PubJWKURL string `yaml:"pubjwkURL,omitempty"`
 }
 
 // Legacy default providers configuration

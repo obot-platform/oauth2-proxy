@@ -21,7 +21,6 @@ Valid providers are :
 - [Keycloak](keycloak.md) (Deprecated)
 - [Keycloak OIDC](keycloak_oidc.md)
 - [LinkedIn](linkedin.md)
-- [login.gov](login_gov.md)
 - [Microsoft Azure](ms_azure_ad.md) (Deprecated)
 - [Microsoft Entra ID](ms_entra_id.md)
 - [Nextcloud](nextcloud.md)

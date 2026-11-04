@@ -440,18 +440,6 @@ make up the header value
 | `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
 | `roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
 
-### LoginGovOptions
-
-(**Appears on:** [Provider](#provider))
-
-
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `jwtKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
-| `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
-| `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
-
 ### LoginURLParameter
 
 (**Appears on:** [Provider](#provider))
@@ -585,7 +573,6 @@ Provider holds all configuration for a single provider
 | `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
-| `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
@@ -612,7 +599,7 @@ Provider holds all configuration for a single provider
 
 ProviderType is used to enumerate the different provider type options
 Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
-gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+gitlab, google, keycloak, keycloak-oidc, linkedin, nextcloud
 and oidc.
 
 ### Providers
