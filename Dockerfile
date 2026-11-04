@@ -32,12 +32,7 @@ ARG BUILDPLATFORM
 # Reload version argument
 ARG VERSION
 
-# Build binary and make sure there is at least an empty key file.
-#  This is useful for GCP App Engine custom runtime builds, because
-#  you cannot use multiline variables in their app.yaml, so you have to
-#  build the key into the container and then tell it where it is
-#  by setting OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem
-#  in app.yaml instead.
+# Build binary.
 # Set the cross compilation arguments based on the TARGETPLATFORM which is
 #  automatically set by the docker engine.
 RUN case ${TARGETPLATFORM} in \
@@ -51,7 +46,7 @@ RUN case ${TARGETPLATFORM} in \
          "linux/arm/v7") GOARCH=arm GOARM=7 ;; \
     esac && \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
-    GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
+    GOARCH=${GOARCH} VERSION=${VERSION} make build
 
 # Reload runtime image
 ARG RUNTIME_IMAGE
@@ -61,7 +56,6 @@ FROM ${RUNTIME_IMAGE}
 ARG VERSION
 
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
-COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
 
 LABEL org.opencontainers.image.licenses=MIT \
       org.opencontainers.image.description="A reverse proxy that provides authentication with Google, Azure, OpenID Connect and many more identity providers." \

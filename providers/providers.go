@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 const (
@@ -64,8 +64,6 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
 	case options.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
-	case options.LoginGovProvider:
-		return NewLoginGovProvider(providerData, providerConfig.LoginGovConfig)
 	case options.NextCloudProvider:
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
@@ -142,7 +140,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	errs = append(errs, p.compileLoginParams(providerConfig.LoginURLParameters)...)
 
 	if len(errs) > 0 {
-		return nil, k8serrors.NewAggregate(errs)
+		return nil, errors.Join(errs...)
 	}
 
 	// Make the OIDC options available to all providers that support it
@@ -190,7 +188,7 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
+		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider,
 		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
 	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
