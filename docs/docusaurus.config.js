@@ -94,11 +94,6 @@ const config = {
         },
         items: [
           {
-            href: 'https://www.oauth2-proxy.dev',
-            label: 'Home',
-            position: 'left',
-          },
-          {
             type: 'docSidebar',
             sidebarId: 'docs',
             position: 'left',

@@ -209,7 +209,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				}
 			},
 			Entry("unverified email denied", emailsTableInput{
-				expectedError:        ErrEmailNotVerified,
+				expectedError:        errors.New("user email is not verified"),
 				allowUnverifiedEmail: false,
 			}),
 			Entry("unverified email allowed", emailsTableInput{

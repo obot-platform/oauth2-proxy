@@ -196,7 +196,6 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		s.User = newSession.User
 		s.Groups = newSession.Groups
 		s.PreferredUsername = newSession.PreferredUsername
-		s.AdditionalClaims = newSession.AdditionalClaims
 	}
 
 	s.AccessToken = newSession.AccessToken
@@ -248,7 +247,7 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 				return nil, errors.New("token response did not contain an id_token")
 			}
 		default:
-			return nil, fmt.Errorf("could not verify id_token: %w", err)
+			return nil, fmt.Errorf("could not verify id_token: %v", err)
 		}
 	}
 

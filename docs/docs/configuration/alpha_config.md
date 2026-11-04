@@ -167,17 +167,6 @@ injectResponseHeaders:
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
 * `secretSource` - `value` (base64), `fromFile` (file path)
 
-#### Claim value serialization
-
-`claimSource` converts the selected claim into one or more string header values. Scalars
-produce one value, while arrays produce one value per element. Values that cannot be
-converted directly to strings, such as objects, are JSON-encoded individually.
-
-Each non-empty value is added separately under the configured header name. An array of
-objects therefore produces multiple header values containing one JSON object each, not a
-single JSON array. HTTP libraries and intermediaries may expose repeated values as a
-comma-joined string, so consumers should retrieve and parse each header value separately.
-
 **Request option:** `preserveRequestValue: true` retains existing header values
 
 **Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
@@ -342,8 +331,7 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `team` | _string_ | Team sets restrict logins to members of this team - Bitbucket has deprecated teams, it will act as workspace instead |
-| `workspace` | _string_ | Workspace sets restrict logins to members of this workspace, use workspace slug |
+| `team` | _string_ | Team sets restrict logins to members of this team |
 | `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
 ### ClaimSource
@@ -439,6 +427,18 @@ make up the header value
 | ----- | ---- | ----------- |
 | `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
 | `roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
+
+### LoginGovOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `jwtKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
+| `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
+| `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
 
 ### LoginURLParameter
 
@@ -573,6 +573,7 @@ Provider holds all configuration for a single provider
 | `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
+| `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
@@ -599,7 +600,7 @@ Provider holds all configuration for a single provider
 
 ProviderType is used to enumerate the different provider type options
 Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
-gitlab, google, keycloak, keycloak-oidc, linkedin, nextcloud
+gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 and oidc.
 
 ### Providers
@@ -677,7 +678,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `id` | _string_ | ID should be a unique identifier for the upstream.<br/>This value is required for all upstreams. |
-| `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Without RewriteTarget, Path follows gorilla/mux route syntax.<br/>Eg:<br/>- `/foo`: Match only the explicit path `/foo`<br/>- `/bar/`: Match any path prefixed with `/bar/`<br/>- `/baz/{path:.*}`: Match any path prefixed with `/baz/`<br/>When RewriteTarget is set, Path is treated as a regular expression.<br/>Eg: `^/baz/(.*)$` matches any path prefixed with `/baz` and captures the<br/>remaining path for use with RewriteTarget. |
+| `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Path can also take a pattern when used with RewriteTarget.<br/>Path segments can be captured and matched using regular experessions.<br/>Eg:<br/>- `^/foo$`: Match only the explicit path `/foo`<br/>- `^/bar/$`: Match any path prefixed with `/bar/`<br/>- `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget |
 | `rewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem<br/>(for a `file:` upstream).<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server.  Or if the upstream were `file:///app`, a request for<br/>`/baz/info.html` would return the contents of the file `/app/foo/info.html`. |
 | `uri` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
 | `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
