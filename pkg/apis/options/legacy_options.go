@@ -512,7 +512,6 @@ type LegacyProvider struct {
 	EntraIDAllowedTenants                  []string `flag:"entra-id-allowed-tenant" cfg:"entra_id_allowed_tenants"`
 	EntraIDFederatedTokenAuth              bool     `flag:"entra-id-federated-token-auth" cfg:"entra_id_federated_token_auth"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
-	BitbucketWorkspace                     string   `flag:"bitbucket-workspace" cfg:"bitbucket_workspace"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
@@ -563,7 +562,10 @@ type LegacyProvider struct {
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
 	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
-	AcrValues string `flag:"acr-values" cfg:"acr_values"`
+	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
+	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
+	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
+	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	// PKCE Code Challenge method to use (either S256 or plain)
 	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"code_challenge_method"`
 	// Provided for legacy reasons, to be dropped in newer version see #1667
@@ -578,8 +580,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
 	flagSet.StringSlice("entra-id-allowed-tenant", []string{}, "list of tenants allowed for MS Entra ID multi-tenant application")
 	flagSet.Bool("entra-id-federated-token-auth", false, "enable oAuth client authentication with federated token projected by Azure Workload Identity plugin, instead of client secret.")
-	flagSet.String("bitbucket-team", "", "[deprecated, use bitbucket-workspace instead] restrict logins to members of this team")
-	flagSet.String("bitbucket-workspace", "", "restrict logins to members of this workspace, use workspace slug (eg. `myworkspace`) instead of workspace name (eg. `My Workspace`)")
+	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
@@ -622,6 +623,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
+	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
+	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
+	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
@@ -764,10 +768,15 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Group:    l.GitLabGroup,
 			Projects: l.GitLabProjects,
 		}
+	case "login.gov":
+		provider.LoginGovConfig = LoginGovOptions{
+			JWTKey:     l.JWTKey,
+			JWTKeyFile: l.JWTKeyFile,
+			PubJWKURL:  l.PubJWKURL,
+		}
 	case "bitbucket":
 		provider.BitbucketConfig = BitbucketOptions{
 			Team:       l.BitbucketTeam,
-			Workspace:  l.BitbucketWorkspace,
 			Repository: l.BitbucketRepository,
 		}
 	case "google":

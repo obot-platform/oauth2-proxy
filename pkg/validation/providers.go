@@ -102,6 +102,10 @@ func providerRequiresClientSecret(provider options.Provider) bool {
 		return false
 	}
 
+	if provider.Type == "login.gov" {
+		return false
+	}
+
 	return true
 }
 

@@ -14,7 +14,7 @@ import (
 // BitbucketProvider represents an Bitbucket based Identity Provider
 type BitbucketProvider struct {
 	*ProviderData
-	Workspace  string
+	Team       string
 	Repository string
 }
 
@@ -67,10 +67,7 @@ func NewBitbucketProvider(p *ProviderData, opts options.BitbucketOptions) *Bitbu
 	provider := &BitbucketProvider{ProviderData: p}
 
 	if opts.Team != "" {
-		provider.setWorkspace(opts.Team)
-	}
-	if opts.Workspace != "" {
-		provider.setWorkspace(opts.Workspace)
+		provider.setTeam(opts.Team)
 	}
 	if opts.Repository != "" {
 		provider.setRepository(opts.Repository)
@@ -78,11 +75,11 @@ func NewBitbucketProvider(p *ProviderData, opts options.BitbucketOptions) *Bitbu
 	return provider
 }
 
-// setWorkspace defines the Bitbucket workspace the user must be part of
-func (p *BitbucketProvider) setWorkspace(workspace string) {
-	p.Workspace = workspace
-	if !strings.Contains(p.Scope, "account") {
-		p.Scope += " account"
+// setTeam defines the Bitbucket team the user must be part of
+func (p *BitbucketProvider) setTeam(team string) {
+	p.Team = team
+	if !strings.Contains(p.Scope, "team") {
+		p.Scope += " team"
 	}
 }
 
@@ -94,11 +91,6 @@ func (p *BitbucketProvider) setRepository(repository string) {
 	}
 }
 
-// ValidateSession validates the AccessToken using a Bearer token header
-func (p *BitbucketProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
-}
-
 // GetEmailAddress returns the email of the authenticated user
 func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 
@@ -108,11 +100,9 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			Primary bool   `json:"is_primary"`
 		}
 	}
-	var workspaces struct {
+	var teams struct {
 		Values []struct {
-			Workspace struct {
-				Slug string `json:"slug"`
-			} `json:"workspace"`
+			Name string `json:"username"`
 		}
 	}
 	var repositories struct {
@@ -121,10 +111,9 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		}
 	}
 
-	requestURL := p.ValidateURL.String()
+	requestURL := p.ValidateURL.String() + "?access_token=" + s.AccessToken
 	err := requests.New(requestURL).
 		WithContext(ctx).
-		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
@@ -132,29 +121,24 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		return "", err
 	}
 
-	if p.Workspace != "" {
+	if p.Team != "" {
 		teamURL := &url.URL{}
 		*teamURL = *p.ValidateURL
-		// /teams api was deprecated in Oct 20, use workspaces instead
-		// https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/
-		// https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-get
-		teamURL.Path = "2.0/user/workspaces"
+		teamURL.Path = "/2.0/teams"
 
-		requestURL := teamURL.String()
+		requestURL := teamURL.String() + "?role=member&access_token=" + s.AccessToken
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
-			WithHeaders(makeOIDCHeader(s.AccessToken)).
 			Do().
-			UnmarshalInto(&workspaces)
-		logger.Printf("workspaces: %+v", workspaces)
+			UnmarshalInto(&teams)
 		if err != nil {
 			logger.Errorf("failed requesting teams membership: %v", err)
 			return "", err
 		}
 		var found = false
-		for _, workspace := range workspaces.Values {
-			if p.Workspace == workspace.Workspace.Slug {
+		for _, team := range teams.Values {
+			if p.Team == team.Name {
 				found = true
 				break
 			}
@@ -168,16 +152,14 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 	if p.Repository != "" {
 		repositoriesURL := &url.URL{}
 		*repositoriesURL = *p.ValidateURL
-		// split the repository name to get the workspace name, which is the first part of the repository name
-		var repoWorkspace = strings.Split(p.Repository, "/")[0]
-		repositoriesURL.Path = "/2.0/repositories/" + repoWorkspace
+		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
 
 		requestURL := repositoriesURL.String() + "?role=contributor" +
-			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"")
+			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"") +
+			"&access_token=" + s.AccessToken
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
-			WithHeaders(makeOIDCHeader(s.AccessToken)).
 			Do().
 			UnmarshalInto(&repositories)
 		if err != nil {
